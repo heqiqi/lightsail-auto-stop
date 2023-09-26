@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as sns from 'aws-cdk-lib/aws-sns';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as events from 'aws-cdk-lib/aws-events';
@@ -11,8 +12,8 @@ import { CfnOutput } from 'aws-cdk-lib';
 export class LightsailAutoStopStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
-    // create sqs for notification
-    const pnSqs = new sqs.Queue(this, 'Lightsail-quota-notificatoin');
+    // create sns for notification
+    const snsTopic = new sns.Topic(this, 'Lightsail-quota-notificatoin');
 
     const lambdaExecuteRole = new iam.Role(this, 'lightsail-execute-role', {
       assumedBy: new iam.CompositePrincipal(new iam.ServicePrincipal("lambda.amazonaws.com")),
@@ -40,11 +41,11 @@ export class LightsailAutoStopStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(300),
       role: lambdaExecuteRole,
       environment: {
-        SNS_TOPIC: pnSqs.queueArn
+        SNS_TOPIC: snsTopic.topicArn
       }
     });
 
-    pnSqs.grantSendMessages(LightSailDtoMonitorLambda);
+    snsTopic.grantPublish(LightSailDtoMonitorLambda);
 
     new events.Rule(this, 'monitor-lightsail-cronjob', {
       schedule: events.Schedule.cron({ minute: '0' }), // Trigger  every min
@@ -52,7 +53,7 @@ export class LightsailAutoStopStack extends cdk.Stack {
     });
 
     new CfnOutput(this, 'LambdaFunc', { value: LightSailDtoMonitorLambda.functionArn });
-    new CfnOutput(this, 'SQS', { value: pnSqs.queueArn });
+    new CfnOutput(this, 'SNSTopic', { value: snsTopic.topicName });
 
   }
 }

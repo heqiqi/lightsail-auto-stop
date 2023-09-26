@@ -58,13 +58,9 @@ def get_month_dto_quota(instance_name):
     return dto_quota
     
 def get_instance_data_usage(instance_name, data_type):
-    
     client = boto3.client('lightsail')
-    
     # 获取当前时间
     current_time = datetime.utcnow()
-   
-    
     # 计算开始时间（当前时间减去24小时）
     start_time = get_current_month_first_day_zero_time()
     end_time = get_current_month_last_day_last_time()
